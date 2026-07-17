@@ -10,9 +10,49 @@ from git_dr_mirror.gitlab import (
     make_session,
     project_path,
     push_url,
+    sanitize_path,
 )
 
 from conftest import FakeResponse, FakeSession
+
+
+def test_sanitize_valid_names_unchanged():
+    for name in ("repo", "My-Repo", "a", "dot.name", "under_score", "x2.y-z_9"):
+        assert sanitize_path(name) == name
+
+
+def test_sanitize_invalid_names():
+    # A trailing '-' is legal on GitHub but not in a GitLab path.
+    assert sanitize_path("Nadhirix-") == "Nadhirix-6bff2b2"
+    # Forbidden suffixes and leading punctuation.
+    assert sanitize_path("repo.git").startswith("repo")
+    assert sanitize_path("repo.git") != "repo.git"
+    assert not sanitize_path(".hidden").startswith(".")
+    # Even a name with no salvageable characters yields a usable path.
+    assert sanitize_path("---")
+
+
+def test_sanitize_never_collides():
+    # 'foo-' must not land on top of the distinct repo 'foo'.
+    assert sanitize_path("foo-") != sanitize_path("foo")
+    # Deterministic across runs (idempotency depends on it).
+    assert sanitize_path("foo-") == sanitize_path("foo-")
+
+
+def test_invalid_name_created_with_sanitized_path(config):
+    session = FakeSession([
+        FakeResponse(404),                              # project lookup
+        FakeResponse(200, json_data={"id": 7}),         # group lookup
+        FakeResponse(201, json_data={"id": 99}),        # project create
+    ])
+    url = ensure_project(config, "Nadhirix-", session=session)
+    assert url == "https://gitlab.com/backup-group/Nadhirix-6bff2b2.git"
+    # Lookup uses the sanitized path too, so reruns find the project.
+    assert session.calls[0]["url"].endswith("/projects/backup-group%2FNadhirix-6bff2b2")
+    create = session.calls[2]
+    assert create["json"]["path"] == "Nadhirix-6bff2b2"
+    # The display name stays as the original GitHub repo name.
+    assert create["json"]["name"] == "Nadhirix-"
 
 
 def test_paths_and_urls(config):

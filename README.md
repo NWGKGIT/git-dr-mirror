@@ -2,7 +2,7 @@
 
 **One-way disaster-recovery mirror of your GitHub repositories to GitLab.**
 
-Every run discovers all of your GitHub repositories (public *and* private),
+Every run discovers all of your GitHub repositories (public _and_ private),
 mirrors them into a local cache of bare repositories, and pushes the complete
 Git history — all branches and tags — to projects in a GitLab group.
 
@@ -22,7 +22,7 @@ GitLab group (backup)              e.g. gitlab.com/<your-group>/<repo>
 ## Design principles
 
 - **One-way, append-only.** GitHub is the only source of truth. Nothing is
-  ever pushed back to GitHub, and *nothing is ever deleted from GitLab* —
+  ever pushed back to GitHub, and _nothing is ever deleted from GitLab_ —
   the codebase contains no DELETE call (a test enforces this). A repository
   deleted on GitHub simply stops being updated; its backup remains.
 - **Idempotent.** Running twice changes nothing the second time. Safe to
@@ -37,11 +37,11 @@ GitLab group (backup)              e.g. gitlab.com/<your-group>/<repo>
 
 ## What is backed up
 
-| Backed up | Ignored |
-|---|---|
-| Full commit history | Issues, pull requests, discussions |
-| All branches | Releases (the tags themselves *are* backed up) |
-| All tags | GitHub Actions, stars, watchers, wikis |
+| Backed up           | Ignored                                        |
+| ------------------- | ---------------------------------------------- |
+| Full commit history | Issues, pull requests, discussions             |
+| All branches        | Releases (the tags themselves _are_ backed up) |
+| All tags            | GitHub Actions, stars, watchers, wikis         |
 
 Scope: repositories **you own**, excluding forks, by default — both
 configurable (see [Configuration](#configuration)).
@@ -79,12 +79,12 @@ uv run git-dr-mirror
 **GitHub** — <https://github.com/settings/personal-access-tokens>
 (fine-grained token, recommended):
 
-- Repository access: *All repositories*
+- Repository access: _All repositories_
 - Permissions: **Contents: Read-only**, **Metadata: Read-only**
 
 Or a classic token with the `repo` scope.
 
-**GitLab** — *Preferences → Access tokens*:
+**GitLab** — _Preferences → Access tokens_:
 
 - Scopes: **`api`** (create projects) and **`write_repository`** (push)
 - No delete/admin permissions are needed — the tool never deletes anything.
@@ -100,22 +100,22 @@ Everything is an environment variable; a `.env` file in the working
 directory is loaded automatically (real environment variables win).
 `.env.example` is the fully commented reference.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `GITHUB_TOKEN` | **required** | Read access to your repositories |
-| `GITLAB_TOKEN` | **required** | Create projects + push |
-| `GITLAB_GROUP` | **required** | Existing GitLab group for the backups (subgroups OK: `team/backup`) |
-| `GITLAB_URL` | `https://gitlab.com` | Self-hosted GitLab supported |
-| `GITHUB_API_URL` | `https://api.github.com` | GitHub Enterprise supported |
-| `MIRROR_DIR` | `~/github-backup` | Local bare-mirror cache |
-| `GITHUB_AFFILIATION` | `owner` | Widen scope: `owner,collaborator,organization_member` |
-| `INCLUDE_FORKS` | `false` | Also mirror forks |
-| `EXCLUDE_REPOS` | *(empty)* | Comma-separated name globs to skip, e.g. `scratch-*,tmp` |
-| `GITLAB_VISIBILITY` | `private` | Visibility of created projects |
-| `HTTP_TIMEOUT` | `30` | Seconds per API request |
-| `HTTP_RETRIES` | `3` | Retries (exponential backoff) for transient API errors |
-| `GIT_TIMEOUT` | `3600` | Seconds per git operation — raise for huge repos |
-| `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| Variable             | Default                  | Purpose                                                             |
+| -------------------- | ------------------------ | ------------------------------------------------------------------- |
+| `GITHUB_TOKEN`       | **required**             | Read access to your repositories                                    |
+| `GITLAB_TOKEN`       | **required**             | Create projects + push                                              |
+| `GITLAB_GROUP`       | **required**             | Existing GitLab group for the backups (subgroups OK: `team/backup`) |
+| `GITLAB_URL`         | `https://gitlab.com`     | Self-hosted GitLab supported                                        |
+| `GITHUB_API_URL`     | `https://api.github.com` | GitHub Enterprise supported                                         |
+| `MIRROR_DIR`         | `~/github-backup`        | Local bare-mirror cache                                             |
+| `GITHUB_AFFILIATION` | `owner`                  | Widen scope: `owner,collaborator,organization_member`               |
+| `INCLUDE_FORKS`      | `false`                  | Also mirror forks                                                   |
+| `EXCLUDE_REPOS`      | _(empty)_                | Comma-separated name globs to skip, e.g. `scratch-*,tmp`            |
+| `GITLAB_VISIBILITY`  | `private`                | Visibility of created projects                                      |
+| `HTTP_TIMEOUT`       | `30`                     | Seconds per API request                                             |
+| `HTTP_RETRIES`       | `3`                      | Retries (exponential backoff) for transient API errors              |
+| `GIT_TIMEOUT`        | `3600`                   | Seconds per git operation — raise for huge repos                    |
+| `LOG_LEVEL`          | `INFO`                   | `DEBUG`, `INFO`, `WARNING`, `ERROR`                                 |
 
 ### CLI flags
 
@@ -256,7 +256,7 @@ That's the point of disaster recovery: deletion (accidental or malicious)
 is one of the disasters. Deleted repos stop updating but their backups
 survive. Clean them up manually if you truly want them gone.
 
-**Are deleted *branches* also kept?**
+**Are deleted _branches_ also kept?**
 No — branch and tag deletions on GitHub propagate to the mirror on the next
 run. The mirror reflects the current state of the repository's refs; the
 no-delete guarantee applies to repositories/projects, not individual refs.
@@ -269,8 +269,17 @@ small.
 
 **Does it push GitHub pull-request refs (`refs/pull/*`)?**
 No. Only branches and tags are pushed — GitLab rejects writes to hidden
-refs, and PR refs are GitHub-internal. They *are* kept in the local mirror
+refs, and PR refs are GitHub-internal. They _are_ kept in the local mirror
 cache.
+
+**My repo name is valid on GitHub but the GitLab project has a suffix — why?**
+GitLab project paths are stricter than GitHub repo names: they can't start
+or end with `-`, `_` or `.`, and can't end in `.git` or `.atom`. When a
+name breaks those rules (e.g. `myrepo-`), the tool derives a valid path by
+cleaning the name and appending a short hash of the original
+(`myrepo-6bff2b2`) so two different GitHub repos can never collide on the
+same GitLab project. The project's *display name* keeps the original repo
+name.
 
 **What about GitHub wikis?**
 Not currently backed up (a wiki is a separate `<repo>.wiki.git`
@@ -310,6 +319,12 @@ GitHub, GitLab, or your mirrors.
 Layout: `src/git_dr_mirror/` — `config` (env parsing), `github` (discovery),
 `gitlab` (project ensure), `mirror` (git operations), `lock` (single-run
 flock), `runner` (orchestration), `cli` (entry point).
+
+## Heads Up
+
+One heads-up: renaming a group path changes its URL, so if anything
+else referenced gitlab.com/backup-group3, that link is now dead
+(GitLab may redirect for a while, but don't rely on it).
 
 ## License
 
