@@ -1,0 +1,29 @@
+[project]
+name = "git-dr-mirror"
+version = "0.1.0"
+description = "One-way disaster-recovery mirror of your GitHub repositories to GitLab"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.13"
+dependencies = [
+    "requests>=2.32",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+git-dr-mirror = "git_dr_mirror.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/git_dr_mirror"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

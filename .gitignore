@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets — never commit tokens
+.env
+.env.*
+!.env.example
+
+# Test artifacts
+.pytest_cache/
