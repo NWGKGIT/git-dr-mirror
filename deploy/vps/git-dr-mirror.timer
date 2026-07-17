@@ -1,0 +1,16 @@
+# git-dr-mirror — systemd SYSTEM timer (always-on VPS / server)
+#
+# Persistent=true also protects a VPS: if the machine was down or rebooting
+# when a run was due, the missed run fires once after boot.
+
+[Unit]
+Description=Run git-dr-mirror every 6 hours
+
+[Timer]
+OnCalendar=00/6:43:00
+Persistent=true
+RandomizedDelaySec=5m
+Unit=git-dr-mirror.service
+
+[Install]
+WantedBy=timers.target

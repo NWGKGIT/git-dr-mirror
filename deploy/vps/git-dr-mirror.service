@@ -1,0 +1,54 @@
+# git-dr-mirror — systemd SYSTEM service (always-on VPS / server)
+#
+# Assumes the layout created by the README's VPS instructions:
+#   code:      /opt/git-dr-mirror            (clone + .venv)
+#   config:    /etc/git-dr-mirror/env        (tokens; root:gitmirror, mode 640)
+#   mirrors:   /var/lib/git-dr-mirror        (created automatically)
+#   user:      gitmirror                     (dedicated, unprivileged)
+#
+# Install:
+#   1. cp deploy/vps/git-dr-mirror.{service,timer} /etc/systemd/system/
+#   2. systemctl daemon-reload
+#   3. systemctl enable --now git-dr-mirror.timer
+#
+# Run once manually:      systemctl start git-dr-mirror.service
+# Watch logs:             journalctl -u git-dr-mirror -f
+
+[Unit]
+Description=GitHub -> GitLab disaster-recovery mirror
+Documentation=https://github.com/OWNER/git-dr-mirror
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=gitmirror
+Group=gitmirror
+WorkingDirectory=/opt/git-dr-mirror
+ExecStart=/opt/git-dr-mirror/.venv/bin/git-dr-mirror
+# Tokens live outside the code checkout, readable only by root/gitmirror.
+EnvironmentFile=/etc/git-dr-mirror/env
+Environment=MIRROR_DIR=/var/lib/git-dr-mirror
+# git wants a HOME it can read config from; keep it inside the state dir.
+Environment=HOME=/var/lib/git-dr-mirror
+
+# --- Hardening: the service can write ONLY to the mirror directory. ---
+StateDirectory=git-dr-mirror
+ProtectSystem=strict
+ReadWritePaths=/var/lib/git-dr-mirror
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
