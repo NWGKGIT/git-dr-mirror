@@ -22,6 +22,15 @@ def build_parser() -> argparse.ArgumentParser:
             "to GitLab. Configuration comes from environment variables or a "
             ".env file (see .env.example)."
         ),
+        epilog=(
+            "subcommands:\n"
+            "  setup    interactive first-time setup (prompts, writes .env,\n"
+            "           verifies your tokens)\n"
+            "  check    verify credentials and group access, then exit\n"
+            "\n"
+            "with no subcommand, runs a backup."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--dry-run",
@@ -46,8 +55,41 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _run_check(env_file: str | None) -> int:
+    """Non-interactive credential check: print results, exit 0/1."""
+    from . import preflight
+
+    try:
+        config = load_config(env_file=env_file)
+    except ConfigError as exc:
+        print(f"Configuration error: {exc}", file=sys.stderr)
+        return 2
+
+    all_ok = True
+    for result in preflight.run_all(config):
+        mark = "OK  " if result.ok else "FAIL"
+        print(f"[{mark}] {result.title}: {result.detail}")
+        if not result.ok:
+            all_ok = False
+            if result.hint:
+                print(f"       {result.hint}")
+    return 0 if all_ok else 1
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw = sys.argv[1:] if argv is None else argv
+
+    # Lightweight subcommand layer. The bare command still runs a backup, so
+    # existing usage and tests are unaffected.
+    if raw and raw[0] == "setup":
+        from .wizard import run_wizard
+        env_file = raw[2] if len(raw) > 2 and raw[1] == "--env-file" else None
+        return run_wizard(env_file=env_file)
+    if raw and raw[0] == "check":
+        env_file = raw[2] if len(raw) > 2 and raw[1] == "--env-file" else None
+        return _run_check(env_file)
+
+    args = build_parser().parse_args(raw)
 
     try:
         config = load_config(env_file=args.env_file)

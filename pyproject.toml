@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "One-way disaster-recovery mirror of your GitHub repositories to GitLab"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.13"
+requires-python = ">=3.9"
 dependencies = [
     "requests>=2.32",
     "python-dotenv>=1.0",

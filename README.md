@@ -19,50 +19,59 @@ Local cache of bare mirrors        e.g. ~/github-backup/<repo>.git
 GitLab group (backup)              e.g. gitlab.com/<your-group>/<repo>
 ```
 
-## Design principles
-
-- **One-way, append-only.** GitHub is the only source of truth. Nothing is
-  ever pushed back to GitHub, and _nothing is ever deleted from GitLab_ —
-  the codebase contains no DELETE call (a test enforces this). A repository
-  deleted on GitHub simply stops being updated; its backup remains.
-- **Idempotent.** Running twice changes nothing the second time. Safe to
-  interrupt at any point (Ctrl-C, crash, power loss) and rerun.
-- **Fault tolerant.** One repository failing never stops the others.
-  Transient API errors are retried with backoff, git operations have hard
-  timeouts and a retry, interrupted clones are detected and redone, and
-  overlapping runs are prevented by a kernel-managed lock.
-- **Secrets stay secret.** Tokens are read from the environment (or a
-  `.env` file) and injected into git per-invocation. They never appear in
-  command lines, `ps` output, git remote config, logs, or on disk.
-
-## What is backed up
-
-| Backed up           | Ignored                                        |
-| ------------------- | ---------------------------------------------- |
-| Full commit history | Issues, pull requests, discussions             |
-| All branches        | Releases (the tags themselves _are_ backed up) |
-| All tags            | GitHub Actions, stars, watchers, wikis         |
-
-Scope: repositories **you own**, excluding forks, by default — both
-configurable (see [Configuration](#configuration)).
-
 ## Requirements
 
-- Linux (any distribution; uses `flock`)
-- Python ≥ 3.13 — with [uv](https://docs.astral.sh/uv/) _or_ plain
-  `python3` + pip/venv; the installer auto-detects and uses what you have
-- `git` on `PATH`
-- systemd for scheduled runs (optional — a cron alternative is documented)
-- A GitHub token and a GitLab token (scopes below)
+- A Unix-like OS: Linux, macOS, or Windows via WSL. (The run lock uses
+  `flock`, so native Windows isn't supported.)
+- Python ≥ 3.9 — with [uv](https://docs.astral.sh/uv/) _or_ plain
+  `python3` + pip/venv; the installer auto-detects and uses what you have.
+- `git` on `PATH`.
+- A GitHub token and a GitLab token (the wizard tells you exactly what
+  scopes, or see [Creating the tokens](#creating-the-tokens)).
+- systemd for scheduled runs (optional; a cron alternative is documented).
 
 ## Quick start
 
 ```bash
 git clone https://github.com/NWGKGIT/git-dr-mirror
 cd git-dr-mirror
-./install.sh            # venv + install + systemd timer, one command
+./install.sh
+```
 
-$EDITOR .env            # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
+That's it. `install.sh` sets up the environment and then launches an
+interactive setup wizard that:
+
+1. Checks your machine can run the tool (OS, Python, git).
+2. Creates your `.env` and prompts for your tokens and GitLab group.
+3. Verifies the tokens and group access — read-only, nothing is created.
+4. Optionally previews what would be backed up (a dry run).
+
+If anything is wrong (a bad token, a group that doesn't exist), the wizard
+tells you what to fix in plain language instead of crashing.
+
+`install.sh` is safe to rerun anytime and never overwrites an existing
+`.env`. To remove the scheduled units again: `./install.sh --uninstall` —
+code, `.env`, and mirrors stay put.
+
+You can rerun the wizard or re-check your credentials at any time:
+
+```bash
+git-dr-mirror setup    # interactive setup again
+git-dr-mirror check    # just verify credentials + group, then exit
+```
+
+## Manual setup
+
+Prefer to skip the wizard? Everything it does, you can do by hand.
+
+```bash
+git clone https://github.com/NWGKGIT/git-dr-mirror
+cd git-dr-mirror
+./install.sh </dev/null      # non-interactive: sets up the venv + units only
+
+cp .env.example .env
+chmod 600 .env               # tokens live here — keep it private
+$EDITOR .env                 # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
 
 # See what would happen, without touching anything:
 ./.venv/bin/git-dr-mirror --dry-run
@@ -73,10 +82,6 @@ $EDITOR .env            # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
 # Full run:
 ./.venv/bin/git-dr-mirror
 ```
-
-`install.sh` is safe to rerun anytime (it's idempotent) and never
-overwrites an existing `.env`. To remove the scheduled units again:
-`./install.sh --uninstall` — code, `.env`, and mirrors stay put.
 
 ### Creating the tokens
 
@@ -94,9 +99,38 @@ Or a classic token with the `repo` scope.
 - No delete/admin permissions are needed — the tool never deletes anything.
 
 **GitLab group** — create a group once in the GitLab UI (e.g.
-`your-github-backup`) and put its path in `GITLAB_GROUP`. Projects inside
+`my-github-backup`) and put its path in `GITLAB_GROUP`. Projects inside
 it are created automatically; the group itself is not, so the token's blast
 radius stays small.
+
+## How it works
+
+A few ideas explain everything the tool does:
+
+- **One-way, append-only.** GitHub is the only source of truth. Nothing is
+  ever pushed back to GitHub, and _nothing is ever deleted from GitLab_ —
+  the codebase contains no DELETE call (a test enforces this). A repository
+  deleted on GitHub simply stops being updated; its backup remains.
+- **Idempotent.** Running twice changes nothing the second time. Safe to
+  interrupt at any point (Ctrl-C, crash, power loss) and rerun.
+- **Fault tolerant.** One repository failing never stops the others.
+  Transient API errors are retried with backoff, git operations have hard
+  timeouts and a retry, interrupted clones are detected and redone, and
+  overlapping runs are prevented by a kernel-managed lock.
+- **Secrets stay secret.** Tokens are read from the environment (or a
+  `.env` file) and injected into git per-invocation. They never appear in
+  command lines, `ps` output, git remote config, logs, or on disk.
+
+### What is backed up
+
+| Backed up           | Ignored                                        |
+| ------------------- | ---------------------------------------------- |
+| Full commit history | Issues, pull requests, discussions             |
+| All branches        | Releases (the tags themselves _are_ backed up) |
+| All tags            | GitHub Actions, stars, watchers, wikis         |
+
+Scope: repositories **you own**, excluding forks (to save space), by
+default. Both are configurable (see [Configuration](#configuration)).
 
 ## Configuration
 
@@ -121,19 +155,24 @@ directory is loaded automatically (real environment variables win).
 | `GIT_TIMEOUT`        | `3600`                   | Seconds per git operation — raise for huge repos                    |
 | `LOG_LEVEL`          | `INFO`                   | `DEBUG`, `INFO`, `WARNING`, `ERROR`                                 |
 
-### CLI flags
+### Commands and flags
 
 ```text
+git-dr-mirror setup                                 interactive first-time setup
+git-dr-mirror check                                 verify credentials + group access
 git-dr-mirror [--dry-run] [--repo PATTERN] [--env-file PATH] [--version]
 ```
 
+- `setup` — walk through configuration, write `.env`, and verify tokens.
+- `check` — run the read-only credential/group checks and exit (no prompts,
+  CI-friendly).
 - `--dry-run` — discover and report; change nothing anywhere.
 - `--repo PATTERN` — process only repositories matching the glob.
 - `--env-file PATH` — read configuration from a specific dotenv file.
 
 Exit codes: `0` all good (also when another run already holds the lock),
-`1` at least one repository failed, `2` configuration error, `130`
-interrupted.
+`1` at least one repository failed (or a `check` failed), `2` configuration
+error, `130` interrupted.
 
 ## Deployment
 
@@ -283,12 +322,19 @@ repository). PRs welcome.
 private on GitLab unless you change that — a backup has no reason to be
 public.
 
+**If I rename a GitLab group, do old backup URLs still work?**
+Renaming a group changes its path, and therefore the URL of every project
+under it. GitLab may redirect the old path for a while, but don't rely on
+it — update `GITLAB_GROUP` and any links you kept.
+
 ## Troubleshooting
 
 - `Configuration error: Missing required configuration: ...` — set the
-  variable in `.env` (same directory you run from) or the environment.
+  variable in `.env` (same directory you run from) or the environment, or
+  rerun `git-dr-mirror setup`.
 - `GitLab group '...' does not exist` — create the group in the GitLab UI,
   or fix `GITLAB_GROUP`; also check the token can see the group.
+  `git-dr-mirror check` pinpoints which credential is the problem.
 - `git clone/push failed ... HTTP 401/403` — token expired or missing a
   scope (GitHub: Contents read; GitLab: `write_repository` + `api`).
 - `Another backup run is in progress` — fine; the other run finishes the
@@ -312,13 +358,8 @@ GitHub, GitLab, or your mirrors.
 
 Layout: `src/git_dr_mirror/` — `config` (env parsing), `github` (discovery),
 `gitlab` (project ensure), `mirror` (git operations), `lock` (single-run
-flock), `runner` (orchestration), `cli` (entry point).
-
-## Heads Up
-
-One heads-up: renaming a group path changes its URL, so if anything
-else referenced gitlab.com/backup-group3, that link is now dead
-(GitLab may redirect for a while, but don't rely on it).
+flock), `preflight` (read-only credential checks), `wizard` (interactive
+setup), `runner` (orchestration), `cli` (entry point).
 
 ## License
 

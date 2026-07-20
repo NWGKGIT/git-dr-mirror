@@ -184,23 +184,29 @@ EOF
     fi
 fi
 
-# --- next steps -------------------------------------------------------------
+# --- next steps / wizard launch ---------------------------------------------
 
 echo
-info "Install complete. Next steps:"
-if ! $env_ready; then
-    echo "  1. Fill in your tokens:        \$EDITOR $REPO_DIR/.env"
-fi
-echo "  Preview without changes:       $REPO_DIR/.venv/bin/git-dr-mirror --dry-run"
-echo "  Test with a single repo:       $REPO_DIR/.venv/bin/git-dr-mirror --repo some-small-repo"
-if $have_systemd; then
-    if ! $timer_enabled; then
-        echo "  Enable the schedule:           systemctl --user enable --now $UNIT_NAME.timer"
-    fi
-    echo "  Check the schedule:            systemctl --user list-timers $UNIT_NAME.timer"
-    echo "  Run a backup now:              systemctl --user start $UNIT_NAME.service"
-    echo "  Watch logs:                    journalctl --user -u $UNIT_NAME -f"
+if ! $env_ready && [ -t 0 ]; then
+    info "Launching the interactive setup wizard..."
+    "$REPO_DIR/.venv/bin/git-dr-mirror" setup
 else
-    echo "  No systemd — schedule with cron instead:"
-    echo "    17 */6 * * *  cd $REPO_DIR && ./.venv/bin/git-dr-mirror >> ~/.local/state/git-dr-mirror.log 2>&1"
+    info "Install complete. Next steps:"
+    if ! $env_ready; then
+        echo "  1. Run the setup wizard:       $REPO_DIR/.venv/bin/git-dr-mirror setup"
+        echo "     (or fill in tokens manually: \$EDITOR $REPO_DIR/.env)"
+    fi
+    echo "  Preview without changes:       $REPO_DIR/.venv/bin/git-dr-mirror --dry-run"
+    echo "  Test with a single repo:       $REPO_DIR/.venv/bin/git-dr-mirror --repo some-small-repo"
+    if $have_systemd; then
+        if ! $timer_enabled; then
+            echo "  Enable the schedule:           systemctl --user enable --now $UNIT_NAME.timer"
+        fi
+        echo "  Check the schedule:            systemctl --user list-timers $UNIT_NAME.timer"
+        echo "  Run a backup now:              systemctl --user start $UNIT_NAME.service"
+        echo "  Watch logs:                    journalctl --user -u $UNIT_NAME -f"
+    else
+        echo "  No systemd — schedule with cron instead:"
+        echo "    17 */6 * * *  cd $REPO_DIR && ./.venv/bin/git-dr-mirror >> ~/.local/state/git-dr-mirror.log 2>&1"
+    fi
 fi
