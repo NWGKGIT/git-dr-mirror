@@ -3,7 +3,6 @@
 import pytest
 
 from git_dr_mirror import cli
-from git_dr_mirror.config import ConfigError
 from git_dr_mirror.lock import LockHeldError
 from git_dr_mirror.preflight import CheckResult
 from git_dr_mirror.runner import RunResult
@@ -118,8 +117,12 @@ def test_check_all_ok_exits_zero(monkeypatch, capsys):
 def test_check_failure_exits_one(monkeypatch, capsys):
     results = [
         CheckResult(True, "GitHub token", "authenticated"),
-        CheckResult(False, "GitLab token + group 'x'", "group not found (HTTP 404)",
-                    hint="Create the group first."),
+        CheckResult(
+            False,
+            "GitLab token + group 'x'",
+            "group not found (HTTP 404)",
+            hint="Create the group first.",
+        ),
     ]
     monkeypatch.setattr("git_dr_mirror.preflight.run_all", lambda config: results)
     code = cli.main(["check"])
@@ -133,4 +136,3 @@ def test_check_bad_config_exits_two(monkeypatch, capsys):
     monkeypatch.delenv("GITHUB_TOKEN")
     code = cli.main(["check", "--env-file", "/nonexistent/.env"])
     assert code == 2
-

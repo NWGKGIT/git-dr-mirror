@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: pytest (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --python ${{ matrix.python }}
+      - run: uv run pytest -q
+
+  test-macos:
+    name: pytest (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --python 3.13
+      - run: uv run pytest -q
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck install.sh
+
+  install-smoke:
+    name: install.sh smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install non-interactively (uv path)
+        run: ./install.sh </dev/null
+      - name: Rerun to prove idempotence
+        run: ./install.sh </dev/null
+      - name: Sanity-check the result
+        run: |
+          ./.venv/bin/git-dr-mirror --version
+          test -f .env
+          test "$(stat -c '%a' .env)" = "600"
+
+  install-smoke-pip:
+    name: install.sh smoke test (pip fallback)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install non-interactively without uv on PATH
+        run: ./install.sh </dev/null
+      - name: Sanity-check the result
+        run: |
+          ./.venv/bin/git-dr-mirror --version
+          test -f .env
+          test "$(stat -c '%a' .env)" = "600"

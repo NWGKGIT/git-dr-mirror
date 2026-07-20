@@ -29,13 +29,15 @@ def stubbed(monkeypatch, config):
 
     monkeypatch.setattr(runner.mirror, "update_local_mirror", fake_update)
     monkeypatch.setattr(
-        runner.gitlab, "ensure_project",
+        runner.gitlab,
+        "ensure_project",
         lambda cfg, name, session=None, description=None: (
             events.append(("ensure", name)) or f"https://gitlab.com/g/{name}.git"
         ),
     )
     monkeypatch.setattr(
-        runner.mirror, "push_to_gitlab",
+        runner.mirror,
+        "push_to_gitlab",
         lambda cfg, name, url: events.append(("push", name)),
     )
     return events

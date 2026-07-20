@@ -53,9 +53,7 @@ def request(
     for attempt in range(retries + 1):
         if attempt:
             delay = BACKOFF_BASE * (2 ** (attempt - 1))
-            log.debug(
-                "Retrying %s %s in %.1fs (attempt %d)", method, url, delay, attempt + 1
-            )
+            log.debug("Retrying %s %s in %.1fs (attempt %d)", method, url, delay, attempt + 1)
             sleep(delay)
         try:
             response = session.request(method, url, timeout=timeout, **kwargs)
@@ -75,8 +73,7 @@ def request(
 
         if response.status_code >= 400:
             raise ApiError(
-                f"{method} {url} failed with HTTP {response.status_code}: "
-                f"{response.text[:500]}",
+                f"{method} {url} failed with HTTP {response.status_code}: {response.text[:500]}",
                 status_code=response.status_code,
             )
         return response

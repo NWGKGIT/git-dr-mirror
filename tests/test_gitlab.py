@@ -1,7 +1,5 @@
 """Tests for GitLab project ensure logic."""
 
-import json
-
 import pytest
 
 from git_dr_mirror.gitlab import (
@@ -40,11 +38,13 @@ def test_sanitize_never_collides():
 
 
 def test_invalid_name_created_with_sanitized_path(config):
-    session = FakeSession([
-        FakeResponse(404),                              # project lookup
-        FakeResponse(200, json_data={"id": 7}),         # group lookup
-        FakeResponse(201, json_data={"id": 99}),        # project create
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(404),  # project lookup
+            FakeResponse(200, json_data={"id": 7}),  # group lookup
+            FakeResponse(201, json_data={"id": 99}),  # project create
+        ]
+    )
     url = ensure_project(config, "Nadhirix-", session=session)
     assert url == "https://gitlab.com/backup-group/Nadhirix-6bff2b2.git"
     # Lookup uses the sanitized path too, so reruns find the project.
@@ -73,11 +73,13 @@ def test_existing_project_left_untouched(config):
 
 
 def test_missing_project_created_in_group(config):
-    session = FakeSession([
-        FakeResponse(404),                              # project lookup
-        FakeResponse(200, json_data={"id": 7}),         # group lookup
-        FakeResponse(201, json_data={"id": 99}),        # project create
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(404),  # project lookup
+            FakeResponse(200, json_data={"id": 7}),  # group lookup
+            FakeResponse(201, json_data={"id": 99}),  # project create
+        ]
+    )
     url = ensure_project(config, "new-repo", session=session)
     assert url == "https://gitlab.com/backup-group/new-repo.git"
 
@@ -90,10 +92,12 @@ def test_missing_project_created_in_group(config):
 
 
 def test_missing_group_gives_actionable_error(config):
-    session = FakeSession([
-        FakeResponse(404),  # project lookup
-        FakeResponse(404),  # group lookup
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(404),  # project lookup
+            FakeResponse(404),  # group lookup
+        ]
+    )
     with pytest.raises(GitLabError, match="backup-group"):
         ensure_project(config, "new-repo", session=session)
     # Nothing was created.
@@ -102,6 +106,7 @@ def test_missing_group_gives_actionable_error(config):
 
 def test_subgroup_paths_are_url_encoded(config):
     from dataclasses import replace
+
     config = replace(config, gitlab_group="team/sub")
     session = FakeSession([FakeResponse(200, json_data={"id": 1})])
     ensure_project(config, "repo", session=session)

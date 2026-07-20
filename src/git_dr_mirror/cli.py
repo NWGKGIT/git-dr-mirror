@@ -36,22 +36,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="discover repositories and report what would happen, "
-             "but change nothing locally or on GitLab",
+        "but change nothing locally or on GitLab",
     )
     parser.add_argument(
         "--repo",
         metavar="PATTERN",
         help="only process repositories whose name matches this glob "
-             "(e.g. --repo my-project); useful for testing",
+        "(e.g. --repo my-project); useful for testing",
     )
     parser.add_argument(
         "--env-file",
         metavar="PATH",
         help="load configuration from this dotenv file instead of ./.env",
     )
-    parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
-    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
 
 
@@ -83,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     # existing usage and tests are unaffected.
     if raw and raw[0] == "setup":
         from .wizard import run_wizard
+
         env_file = raw[2] if len(raw) > 2 and raw[1] == "--env-file" else None
         return run_wizard(env_file=env_file)
     if raw and raw[0] == "check":
