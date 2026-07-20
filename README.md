@@ -48,9 +48,11 @@ configurable (see [Configuration](#configuration)).
 
 ## Requirements
 
-- Linux (any distribution; uses `flock`, `systemd` units provided)
-- Python ≥ 3.13 and [uv](https://docs.astral.sh/uv/)
+- Linux (any distribution; uses `flock`)
+- Python ≥ 3.13 — with [uv](https://docs.astral.sh/uv/) _or_ plain
+  `python3` + pip/venv; the installer auto-detects and uses what you have
 - `git` on `PATH`
+- systemd for scheduled runs (optional — a cron alternative is documented)
 - A GitHub token and a GitLab token (scopes below)
 
 ## Quick start
@@ -58,21 +60,23 @@ configurable (see [Configuration](#configuration)).
 ```bash
 git clone https://github.com/OWNER/git-dr-mirror
 cd git-dr-mirror
-uv sync
+./install.sh            # venv + install + systemd timer, one command
 
-cp .env.example .env
-chmod 600 .env          # tokens live here — keep it private
 $EDITOR .env            # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
 
 # See what would happen, without touching anything:
-uv run git-dr-mirror --dry-run
+./.venv/bin/git-dr-mirror --dry-run
 
 # Test end-to-end with a single repository first:
-uv run git-dr-mirror --repo some-small-repo
+./.venv/bin/git-dr-mirror --repo some-small-repo
 
 # Full run:
-uv run git-dr-mirror
+./.venv/bin/git-dr-mirror
 ```
+
+`install.sh` is safe to rerun anytime (it's idempotent) and never
+overwrites an existing `.env`. To remove the scheduled units again:
+`./install.sh --uninstall` — code, `.env`, and mirrors stay put.
 
 ### Creating the tokens
 
@@ -133,71 +137,60 @@ interrupted.
 
 ## Deployment
 
-Two supported modes. Both run the same code on a schedule; the differences
-are where it runs and how it's sandboxed.
+`./install.sh` sets up everything: a systemd **user** timer runs the
+backup every 6 hours, wherever you cloned the repo. The same setup works
+on a laptop and on an always-on VPS — the only difference is one command
+(see below).
 
-### Mode 1 — local workstation / laptop (systemd user units)
+What the installer configures:
 
-For a machine that is **not always on**. The key line is `Persistent=true`
-in the timer: if the computer was shut down or asleep when a run was due,
-systemd fires the missed run once, shortly after the next boot. Runs never
-pile up, a long-powered-off laptop just quietly catches up.
+- `~/.config/systemd/user/git-dr-mirror.{service,timer}`, generated with
+  the absolute path of your clone — no editing needed.
+- `Persistent=true` in the timer: if the machine was shut down or asleep
+  when a run was due, systemd fires the missed run once, shortly after
+  the next boot. Runs never pile up; a long-powered-off laptop just
+  quietly catches up.
+- The service runs with `Nice=10` and idle I/O priority, so a backup
+  never makes the machine feel slow.
 
 ```bash
-# 1. Edit the two paths in the service file to point at your clone:
-$EDITOR deploy/local/git-dr-mirror.service   # WorkingDirectory + ExecStart
-
-# 2. Install and enable:
-mkdir -p ~/.config/systemd/user
-cp deploy/local/git-dr-mirror.{service,timer} ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now git-dr-mirror.timer
-
-# 3. Verify:
 systemctl --user list-timers git-dr-mirror.timer   # next/last run
 systemctl --user start git-dr-mirror.service       # run once now
 journalctl --user -u git-dr-mirror -f              # logs
 ```
 
-If backups should also run while you're logged out, enable lingering:
-`loginctl enable-linger $USER`.
-
-The schedule lives in the timer file (`OnCalendar=00/6:17:00` = every six
-hours); edit it and `systemctl --user daemon-reload`.
-
-### Mode 2 — always-on VPS (systemd system units)
-
-Runs as a dedicated unprivileged user with a hardened sandbox: the service
-can write only to its mirror directory, tokens live in `/etc/git-dr-mirror/env`
-outside the code checkout.
+To change the schedule (default `OnCalendar=00/6:17:00` = every six
+hours), use a drop-in override — it survives reruns of `install.sh`,
+which regenerate the base unit files:
 
 ```bash
-# 1. Dedicated user and directories
-sudo useradd --system --home-dir /var/lib/git-dr-mirror --shell /usr/sbin/nologin gitmirror
-sudo git clone https://github.com/OWNER/git-dr-mirror /opt/git-dr-mirror
-cd /opt/git-dr-mirror && sudo uv sync
-
-# 2. Configuration (systemd EnvironmentFile format: KEY=value, no quotes needed)
-sudo mkdir -p /etc/git-dr-mirror
-sudo cp .env.example /etc/git-dr-mirror/env
-sudo $EDITOR /etc/git-dr-mirror/env        # fill in tokens + group
-sudo chown root:gitmirror /etc/git-dr-mirror/env
-sudo chmod 640 /etc/git-dr-mirror/env
-
-# 3. Install units
-sudo cp deploy/vps/git-dr-mirror.{service,timer} /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now git-dr-mirror.timer
-
-# 4. Verify
-sudo systemctl start git-dr-mirror.service
-sudo journalctl -u git-dr-mirror -f
+systemctl --user edit git-dr-mirror.timer
 ```
 
-Mirrors land in `/var/lib/git-dr-mirror` (`MIRROR_DIR` is set in the
-service file; `StateDirectory` creates it with the right ownership).
+and enter, e.g. for daily at 03:17:
 
-### Alternative: cron (either mode)
+```ini
+[Timer]
+OnCalendar=
+OnCalendar=*-*-* 03:17:00
+```
+
+(The empty `OnCalendar=` line clears the default before setting yours.)
+
+### Running on a VPS
+
+Identical: clone, `./install.sh`, done. Just make sure user services keep
+running after you disconnect:
+
+```bash
+loginctl enable-linger $USER
+```
+
+(The installer reminds you if lingering is off.) For extra isolation you
+can create a dedicated user account and install under it — nothing in the
+tool requires your main account or root.
+
+### Alternative: cron (no systemd)
 
 ```cron
 # m  h        dom mon dow  command
@@ -278,7 +271,7 @@ or end with `-`, `_` or `.`, and can't end in `.git` or `.atom`. When a
 name breaks those rules (e.g. `myrepo-`), the tool derives a valid path by
 cleaning the name and appending a short hash of the original
 (`myrepo-6bff2b2`) so two different GitHub repos can never collide on the
-same GitLab project. The project's *display name* keeps the original repo
+same GitLab project. The project's _display name_ keeps the original repo
 name.
 
 **What about GitHub wikis?**
@@ -302,15 +295,16 @@ public.
   job. If you're sure nothing is running, the lock cannot be stale (it dies
   with its process) — look for a live process: `pgrep -af git-dr-mirror`.
 - A repo keeps failing while others work — run it alone with
-  `LOG_LEVEL=DEBUG uv run git-dr-mirror --repo <name>` and read the output.
+  `LOG_LEVEL=DEBUG ./.venv/bin/git-dr-mirror --repo <name>` and read the output.
 - Timer didn't fire after boot — check `systemctl --user list-timers` and
-  that lingering is enabled if you weren't logged in.
+  that lingering is enabled (`loginctl enable-linger $USER`) if you weren't
+  logged in.
 
 ## Development
 
 ```bash
-uv sync           # install deps
-uv run pytest     # run the test suite (no network, no real git remotes)
+./install.sh      # or: uv sync / pip install -e .
+uv run pytest     # run the test suite (or: ./.venv/bin/pytest)
 ```
 
 The test suite mocks all HTTP and git subprocess calls; it never touches
