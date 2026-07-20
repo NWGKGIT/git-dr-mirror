@@ -58,7 +58,7 @@ configurable (see [Configuration](#configuration)).
 ## Quick start
 
 ```bash
-git clone https://github.com/OWNER/git-dr-mirror
+git clone https://github.com/NWGKGIT/git-dr-mirror
 cd git-dr-mirror
 ./install.sh            # venv + install + systemd timer, one command
 
