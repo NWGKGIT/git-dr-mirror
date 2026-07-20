@@ -161,6 +161,5 @@ def test_push_url_not_stored_in_remote_config(config, fake_git):
     path.mkdir(parents=True)
     push_to_gitlab(config, "proj", "https://gitlab.com/backup-group/proj.git")
     assert not any(
-        "set-url" in c["command"] or "remote" == c["command"][-2:-1]
-        for c in fake_git.calls
+        "set-url" in c["command"] or "remote" == c["command"][-2:-1] for c in fake_git.calls
     )

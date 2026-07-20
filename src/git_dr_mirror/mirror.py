@@ -28,7 +28,8 @@ log = logging.getLogger(__name__)
 #: helpers (keychains, credential managers) so runs are non-interactive
 #: and never touch the user's stored credentials.
 _CREDENTIAL_ARGS = (
-    "-c", "credential.helper=",
+    "-c",
+    "credential.helper=",
     "-c",
     'credential.helper=!f() { echo "username=${GIT_DR_USER}"; echo "password=${GIT_DR_TOKEN}"; }; f',
 )

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 from . import github, gitlab, mirror
 from .config import Config
-from .lock import LockHeldError, run_lock
+from .lock import run_lock
 
 log = logging.getLogger(__name__)
 
@@ -35,12 +35,14 @@ class RunResult:
         return ", ".join(parts)
 
 
-def backup_repo(config: Config, repo: github.Repo,
-                gitlab_session, dry_run: bool = False) -> None:
+def backup_repo(config: Config, repo: github.Repo, gitlab_session, dry_run: bool = False) -> None:
     """Back up a single repository: local mirror, GitLab project, push."""
     if dry_run:
-        log.info("[dry-run] Would mirror %s and push to %s",
-                 repo.name, gitlab.push_url(config, repo.name))
+        log.info(
+            "[dry-run] Would mirror %s and push to %s",
+            repo.name,
+            gitlab.push_url(config, repo.name),
+        )
         return
     mirror.update_local_mirror(config, repo)
     url = gitlab.ensure_project(
@@ -49,8 +51,7 @@ def backup_repo(config: Config, repo: github.Repo,
     mirror.push_to_gitlab(config, repo.name, url)
 
 
-def run_backup(config: Config, *, dry_run: bool = False,
-               only_repo: str | None = None) -> RunResult:
+def run_backup(config: Config, *, dry_run: bool = False, only_repo: str | None = None) -> RunResult:
     """Execute one full backup run. Returns per-repo results.
 
     Args:

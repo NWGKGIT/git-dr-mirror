@@ -62,8 +62,12 @@ def push_url(config: Config, repo_name: str) -> str:
 
 def _get_json(config, session, url, **kwargs):
     response = request(
-        session, "GET", url,
-        timeout=config.http_timeout, retries=config.http_retries, **kwargs,
+        session,
+        "GET",
+        url,
+        timeout=config.http_timeout,
+        retries=config.http_retries,
+        **kwargs,
     )
     return response.json()
 
@@ -100,9 +104,12 @@ def _group_id(config: Config, session: requests.Session) -> int:
     return group["id"]
 
 
-def ensure_project(config: Config, repo_name: str,
-                   session: requests.Session | None = None,
-                   description: str | None = None) -> str:
+def ensure_project(
+    config: Config,
+    repo_name: str,
+    session: requests.Session | None = None,
+    description: str | None = None,
+) -> str:
     """Make sure the backup project for ``repo_name`` exists on GitLab.
 
     Returns the tokenless HTTPS push URL for the project. Idempotent:
@@ -131,7 +138,9 @@ def ensure_project(config: Config, repo_name: str,
             "path": sanitize_path(repo_name),
             "namespace_id": namespace_id,
             "visibility": config.gitlab_visibility,
-            "description": (description or "Disaster-recovery mirror (managed by git-dr-mirror)")[:250],
+            "description": (description or "Disaster-recovery mirror (managed by git-dr-mirror)")[
+                :250
+            ],
             # Backups don't need CI pipelines running on every push.
             "jobs_enabled": False,
         },

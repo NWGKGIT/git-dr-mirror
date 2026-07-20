@@ -14,8 +14,12 @@ def no_sleep(_seconds):
 
 def do_request(session, retries=3):
     return request(
-        session, "GET", "https://api.example.com/x",
-        timeout=5, retries=retries, sleep=no_sleep,
+        session,
+        "GET",
+        "https://api.example.com/x",
+        timeout=5,
+        retries=retries,
+        sleep=no_sleep,
     )
 
 
@@ -27,22 +31,26 @@ def test_success_first_try():
 
 
 def test_retries_connection_errors_then_succeeds():
-    session = FakeSession([
-        requests.ConnectionError("reset"),
-        requests.Timeout("timed out"),
-        FakeResponse(200),
-    ])
+    session = FakeSession(
+        [
+            requests.ConnectionError("reset"),
+            requests.Timeout("timed out"),
+            FakeResponse(200),
+        ]
+    )
     response = do_request(session)
     assert response.status_code == 200
     assert len(session.calls) == 3
 
 
 def test_retries_5xx_and_429():
-    session = FakeSession([
-        FakeResponse(503),
-        FakeResponse(429, headers={"Retry-After": "1"}),
-        FakeResponse(200),
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(503),
+            FakeResponse(429, headers={"Retry-After": "1"}),
+            FakeResponse(200),
+        ]
+    )
     response = do_request(session)
     assert response.status_code == 200
     assert len(session.calls) == 3

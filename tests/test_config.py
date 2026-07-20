@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from git_dr_mirror.config import Config, ConfigError, load_config
+from git_dr_mirror.config import ConfigError, load_config
 
 REQUIRED = {
     "GITHUB_TOKEN": "gh-token",
@@ -80,9 +80,7 @@ def test_all_missing_lists_every_var(tmp_path):
 
 def test_env_file_is_read(monkeypatch, tmp_path):
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "GITHUB_TOKEN=file-gh\nGITLAB_TOKEN=file-gl\nGITLAB_GROUP=file-group\n"
-    )
+    env_file.write_text("GITHUB_TOKEN=file-gh\nGITLAB_TOKEN=file-gl\nGITLAB_GROUP=file-group\n")
     cfg = load_config(env_file=env_file)
     assert cfg.github_token == "file-gh"
     assert cfg.gitlab_group == "file-group"
@@ -90,9 +88,7 @@ def test_env_file_is_read(monkeypatch, tmp_path):
 
 def test_real_environment_beats_env_file(monkeypatch, tmp_path):
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "GITHUB_TOKEN=file-gh\nGITLAB_TOKEN=file-gl\nGITLAB_GROUP=file-group\n"
-    )
+    env_file.write_text("GITHUB_TOKEN=file-gh\nGITLAB_TOKEN=file-gl\nGITLAB_GROUP=file-group\n")
     monkeypatch.setenv("GITHUB_TOKEN", "env-gh")
     cfg = load_config(env_file=env_file)
     assert cfg.github_token == "env-gh"
@@ -100,8 +96,14 @@ def test_real_environment_beats_env_file(monkeypatch, tmp_path):
 
 def test_bool_parsing(monkeypatch, tmp_path):
     set_required(monkeypatch)
-    for raw, expected in [("true", True), ("1", True), ("YES", True),
-                          ("false", False), ("0", False), ("off", False)]:
+    for raw, expected in [
+        ("true", True),
+        ("1", True),
+        ("YES", True),
+        ("false", False),
+        ("0", False),
+        ("off", False),
+    ]:
         monkeypatch.setenv("INCLUDE_FORKS", raw)
         assert load(tmp_path).include_forks is expected
 

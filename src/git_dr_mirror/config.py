@@ -35,9 +35,7 @@ def _get_bool(name: str, default: bool) -> bool:
         return True
     if raw in _FALSE_VALUES:
         return False
-    raise ConfigError(
-        f"{name} must be a boolean (true/false), got {raw!r}"
-    )
+    raise ConfigError(f"{name} must be a boolean (true/false), got {raw!r}")
 
 
 def _get_int(name: str, default: int, *, minimum: int = 0) -> int:
@@ -103,8 +101,7 @@ def load_config(env_file: str | os.PathLike[str] | None = None) -> Config:
     visibility = os.environ.get("GITLAB_VISIBILITY", "").strip() or "private"
     if visibility not in _VALID_VISIBILITIES:
         raise ConfigError(
-            f"GITLAB_VISIBILITY must be one of {sorted(_VALID_VISIBILITIES)}, "
-            f"got {visibility!r}"
+            f"GITLAB_VISIBILITY must be one of {sorted(_VALID_VISIBILITIES)}, got {visibility!r}"
         )
 
     mirror_dir_raw = os.environ.get("MIRROR_DIR", "").strip() or "~/github-backup"

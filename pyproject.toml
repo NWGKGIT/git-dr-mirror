@@ -16,6 +16,7 @@ git-dr-mirror = "git_dr_mirror.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "ruff>=0.8",
 ]
 
 [build-system]
@@ -27,3 +28,7 @@ packages = ["src/git_dr_mirror"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

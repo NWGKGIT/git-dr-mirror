@@ -17,9 +17,11 @@ def gh_repo(name, fork=False):
 
 
 def test_single_page_discovery(config):
-    session = FakeSession([
-        FakeResponse(200, json_data=[gh_repo("alpha"), gh_repo("beta")]),
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(200, json_data=[gh_repo("alpha"), gh_repo("beta")]),
+        ]
+    )
     repos = list_repos(config, session=session)
     assert [r.name for r in repos] == ["alpha", "beta"]
     assert repos[0].clone_url == "https://github.com/me/alpha.git"
@@ -31,14 +33,16 @@ def test_single_page_discovery(config):
 
 
 def test_pagination_follows_link_header(config):
-    session = FakeSession([
-        FakeResponse(
-            200,
-            json_data=[gh_repo("page1-repo")],
-            links={"next": {"url": "https://api.github.com/user/repos?page=2"}},
-        ),
-        FakeResponse(200, json_data=[gh_repo("page2-repo")]),
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(
+                200,
+                json_data=[gh_repo("page1-repo")],
+                links={"next": {"url": "https://api.github.com/user/repos?page=2"}},
+            ),
+            FakeResponse(200, json_data=[gh_repo("page2-repo")]),
+        ]
+    )
     repos = list_repos(config, session=session)
     assert [r.name for r in repos] == ["page1-repo", "page2-repo"]
     # Second call follows the next-link verbatim, without re-sending params.
@@ -47,29 +51,40 @@ def test_pagination_follows_link_header(config):
 
 
 def test_forks_skipped_by_default(config):
-    session = FakeSession([
-        FakeResponse(200, json_data=[gh_repo("mine"), gh_repo("a-fork", fork=True)]),
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(200, json_data=[gh_repo("mine"), gh_repo("a-fork", fork=True)]),
+        ]
+    )
     repos = list_repos(config, session=session)
     assert [r.name for r in repos] == ["mine"]
 
 
 def test_forks_included_when_configured(config):
     config = replace(config, include_forks=True)
-    session = FakeSession([
-        FakeResponse(200, json_data=[gh_repo("mine"), gh_repo("a-fork", fork=True)]),
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(200, json_data=[gh_repo("mine"), gh_repo("a-fork", fork=True)]),
+        ]
+    )
     repos = list_repos(config, session=session)
     assert [r.name for r in repos] == ["mine", "a-fork"]
 
 
 def test_exclude_glob_patterns(config):
     config = replace(config, exclude_repos=["scratch-*", "tmp"])
-    session = FakeSession([
-        FakeResponse(200, json_data=[
-            gh_repo("keeper"), gh_repo("scratch-notes"), gh_repo("tmp"),
-        ]),
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(
+                200,
+                json_data=[
+                    gh_repo("keeper"),
+                    gh_repo("scratch-notes"),
+                    gh_repo("tmp"),
+                ],
+            ),
+        ]
+    )
     repos = list_repos(config, session=session)
     assert [r.name for r in repos] == ["keeper"]
 
