@@ -27,6 +27,7 @@ class CheckResult:
     title: str
     detail: str
     hint: str | None = None  # remediation shown only when ok is False
+    keys: tuple = ()  # .env keys involved, so the wizard can re-prompt them
 
 
 def _network_hint(exc: Exception) -> str:
@@ -39,6 +40,7 @@ def _network_hint(exc: Exception) -> str:
 def check_github(config: Config) -> CheckResult:
     """Confirm the GitHub token can list repositories."""
     title = "GitHub token"
+    keys = ("GITHUB_TOKEN",)
     try:
         session = github.make_session(config)
         response = request(
@@ -52,54 +54,69 @@ def check_github(config: Config) -> CheckResult:
         # A valid, correctly-scoped token returns a (possibly empty) JSON list.
         count = len(response.json())
         more = response.links.get("next")
-        detail = (
-            "authenticated; can read repositories"
-            + (" (more than one visible)" if more else f" ({count} visible on first page)")
+        detail = "authenticated; can read repositories" + (
+            " (more than one visible)" if more else f" ({count} visible on first page)"
         )
-        return CheckResult(True, title, detail)
+        return CheckResult(True, title, detail, keys=keys)
     except ApiError as exc:
         if exc.status_code == 401:
             return CheckResult(
-                False, title, "authentication failed (HTTP 401)",
+                False,
+                title,
+                "authentication failed (HTTP 401)",
                 "The GitHub token is invalid or expired. Create a new token at "
                 "https://github.com/settings/personal-access-tokens",
+                keys=keys,
             )
         if exc.status_code == 403:
             return CheckResult(
-                False, title, "access forbidden (HTTP 403)",
+                False,
+                title,
+                "access forbidden (HTTP 403)",
                 "The token is missing repository read access. A fine-grained "
                 "token needs Contents: read-only + Metadata: read-only; a "
                 "classic token needs the 'repo' scope.",
+                keys=keys,
             )
         return CheckResult(
-            False, title, f"GitHub API error (HTTP {exc.status_code})",
+            False,
+            title,
+            f"GitHub API error (HTTP {exc.status_code})",
             str(exc),
+            keys=keys,
         )
     except requests.RequestException as exc:
-        return CheckResult(False, title, "network error", _network_hint(exc))
+        return CheckResult(False, title, "network error", _network_hint(exc), keys=keys)
     except Exception as exc:  # never let the wizard explode
-        return CheckResult(False, title, "unexpected error", str(exc))
+        return CheckResult(False, title, "unexpected error", str(exc), keys=keys)
 
 
 def check_gitlab(config: Config) -> CheckResult:
     """Confirm the GitLab token is valid and the target group is visible."""
     title = f"GitLab token + group {config.gitlab_group!r}"
+    keys = ("GITLAB_TOKEN", "GITLAB_GROUP")
     try:
         session = gitlab.make_session(config)
 
         # 1. Token identity — distinguishes "bad token" from "group not visible".
         try:
             request(
-                session, "GET", f"{config.gitlab_url}/api/v4/user",
-                timeout=config.http_timeout, retries=config.http_retries,
+                session,
+                "GET",
+                f"{config.gitlab_url}/api/v4/user",
+                timeout=config.http_timeout,
+                retries=config.http_retries,
             )
         except ApiError as exc:
             if exc.status_code == 401:
                 return CheckResult(
-                    False, title, "authentication failed (HTTP 401)",
+                    False,
+                    title,
+                    "authentication failed (HTTP 401)",
                     "The GitLab token is invalid or expired. Create a new one "
                     "under GitLab → Preferences → Access tokens with the 'api' "
                     "and 'write_repository' scopes.",
+                    keys=("GITLAB_TOKEN",),
                 )
             raise
 
@@ -107,36 +124,49 @@ def check_gitlab(config: Config) -> CheckResult:
         encoded = quote(config.gitlab_group, safe="")
         try:
             group = request(
-                session, "GET", f"{config.gitlab_url}/api/v4/groups/{encoded}",
-                timeout=config.http_timeout, retries=config.http_retries,
+                session,
+                "GET",
+                f"{config.gitlab_url}/api/v4/groups/{encoded}",
+                timeout=config.http_timeout,
+                retries=config.http_retries,
             ).json()
         except ApiError as exc:
             if exc.status_code == 404:
                 return CheckResult(
-                    False, title, "group not found (HTTP 404)",
+                    False,
+                    title,
+                    "group not found (HTTP 404)",
                     f"The group {config.gitlab_group!r} does not exist, or the "
                     "token cannot see it. Create the group in the GitLab UI "
                     "first (top-level group creation is restricted), then set "
                     "GITLAB_GROUP to its path.",
+                    keys=keys,
                 )
             if exc.status_code == 403:
                 return CheckResult(
-                    False, title, "access forbidden (HTTP 403)",
+                    False,
+                    title,
+                    "access forbidden (HTTP 403)",
                     "The token is valid but cannot access this group. Make sure "
                     "the token owner is a member with at least Maintainer role.",
+                    keys=keys,
                 )
             raise
 
         detail = f"authenticated; group visible (id {group.get('id', '?')})"
-        return CheckResult(True, title, detail)
+        return CheckResult(True, title, detail, keys=keys)
     except ApiError as exc:
         return CheckResult(
-            False, title, f"GitLab API error (HTTP {exc.status_code})", str(exc),
+            False,
+            title,
+            f"GitLab API error (HTTP {exc.status_code})",
+            str(exc),
+            keys=keys,
         )
     except requests.RequestException as exc:
-        return CheckResult(False, title, "network error", _network_hint(exc))
+        return CheckResult(False, title, "network error", _network_hint(exc), keys=keys)
     except Exception as exc:  # never let the wizard explode
-        return CheckResult(False, title, "unexpected error", str(exc))
+        return CheckResult(False, title, "unexpected error", str(exc), keys=keys)
 
 
 def run_all(config: Config) -> list[CheckResult]:
