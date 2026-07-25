@@ -16,3 +16,6 @@ wheels/
 
 # Test artifacts
 .pytest_cache/
+
+# IDE / AI assistant config
+.claude/

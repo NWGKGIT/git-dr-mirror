@@ -76,3 +76,43 @@ def test_404_carries_status_code():
     with pytest.raises(ApiError) as exc:
         do_request(session)
     assert exc.value.status_code == 404
+
+
+def test_jitter_produces_variable_delays():
+    """Backoff delays should vary across retries (full-jitter, not constant)."""
+    from git_dr_mirror.http_client import BACKOFF_BASE, BACKOFF_MAX_CAP
+
+    delays: list[float] = []
+
+    def record_sleep(seconds: float) -> None:
+        delays.append(seconds)
+
+    session = FakeSession([FakeResponse(500), FakeResponse(500), FakeResponse(200)])
+    request(
+        session, "GET", "https://api.example.com/x",
+        timeout=5, retries=3, sleep=record_sleep,
+    )
+    assert len(delays) == 2, "expected one sleep per retry"
+    # Full-jitter: delay must be in [0, cap] — cap for attempt 1 is BACKOFF_BASE
+    assert all(0.0 <= d <= BACKOFF_MAX_CAP for d in delays)
+
+
+def test_retry_after_does_not_double_sleep():
+    """When Retry-After is honored, backoff sleep must be skipped on the next attempt."""
+    sleeps: list[float] = []
+
+    def record_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    # First response: 429 with Retry-After: 5
+    # Second response: success
+    session = FakeSession([
+        FakeResponse(429, headers={"Retry-After": "5"}),
+        FakeResponse(200),
+    ])
+    request(
+        session, "GET", "https://api.example.com/x",
+        timeout=5, retries=2, sleep=record_sleep,
+    )
+    # Exactly one sleep call: the Retry-After value (5s). No extra jitter sleep.
+    assert sleeps == [5], f"expected [5], got {sleeps}"

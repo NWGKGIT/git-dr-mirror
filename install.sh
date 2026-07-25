@@ -7,7 +7,7 @@
 # What install does:
 #   1. Creates .venv and installs the tool (uv if available, else python3+pip).
 #   2. Creates .env from .env.example if missing (never overwrites).
-#   3. Installs systemd *user* units that run the backup every 6 hours.
+#   3. Installs systemd *user* units (Linux only; prints a cron alternative otherwise).
 #   4. Offers to enable the timer.
 #
 # Works the same on a laptop and on a VPS. Runs entirely as your user; no root.

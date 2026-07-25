@@ -296,6 +296,16 @@ def _check_environment() -> str | None:
     return None
 
 
+def _has_systemd() -> bool:
+    """Return True if a systemd user session is reachable on this machine."""
+    import subprocess
+    result = subprocess.run(
+        ["systemctl", "--user", "show-environment"],
+        capture_output=True,
+    )
+    return result.returncode == 0
+
+
 # ---------------------------------------------------------------------------
 # Wizard steps
 # ---------------------------------------------------------------------------
@@ -430,8 +440,13 @@ def run_wizard(env_file: str | None = None) -> int:
         # 5. Summary.
         _heading("You're set up")
         _info(f"Run a backup now:   {_BIN}")
-        _info("Enable the timer:   systemctl --user enable --now git-dr-mirror.timer")
-        _info("Watch logs:         journalctl --user -u git-dr-mirror -f")
+        if _has_systemd():
+            _info("Enable the timer:   systemctl --user enable --now git-dr-mirror.timer")
+            _info("Watch logs:         journalctl --user -u git-dr-mirror -f")
+        else:
+            _info("Schedule with cron (no systemd detected):")
+            _info(f"  17 */6 * * *  cd $(pwd) && {_BIN} >> ~/.local/state/git-dr-mirror.log 2>&1")
+            _info("Logs go to ~/.local/state/git-dr-mirror.log")
         return 0
     except WizardAbort as exc:
         print()
