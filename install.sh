@@ -8,7 +8,8 @@
 #   1. Creates .venv and installs the tool (uv if available, else python3+pip).
 #   2. Creates .env from .env.example if missing (never overwrites).
 #   3. Installs systemd *user* units (Linux only; prints a cron alternative otherwise).
-#   4. Offers to enable the timer.
+#   4. Launches the interactive setup wizard (first run only).
+#   5. Enables the backup timer automatically once the wizard succeeds.
 #
 # Works the same on a laptop and on a VPS. Runs entirely as your user; no root.
 
@@ -159,54 +160,73 @@ WantedBy=timers.target
 EOF
 
     systemctl --user daemon-reload
+fi
 
-    # --- enable the timer ---------------------------------------------------
+# --- wizard or auto-enable --------------------------------------------------
+#
+# Flow:
+#   First-time install  → .env missing required values → launch wizard
+#                          wizard exits 0 → enable timer automatically
+#   Re-run / manual     → .env already complete → enable timer (if not yet on)
+#   No systemd          → wizard still runs; cron line is printed at the end
 
-    timer_enabled=false
-    if systemctl --user is-enabled --quiet "$UNIT_NAME.timer" 2>/dev/null; then
-        timer_enabled=true
-        info "Timer already enabled."
-    elif ! $env_ready; then
-        : # pointless to enable a timer whose runs can only fail
-    elif [ -t 0 ]; then
-        printf 'Enable the 6-hour backup timer now? [Y/n] '
-        read -r answer
-        case "$answer" in
-            [Nn]*) ;;
-            *) systemctl --user enable --now "$UNIT_NAME.timer"; timer_enabled=true ;;
-        esac
+echo
+timer_enabled=false
+
+# Check if timer was already enabled before we do anything.
+if $have_systemd && systemctl --user is-enabled --quiet "$UNIT_NAME.timer" 2>/dev/null; then
+    timer_enabled=true
+fi
+
+if ! $env_ready && [ -t 0 ]; then
+    info "Launching the interactive setup wizard..."
+    "$REPO_DIR/.venv/bin/git-dr-mirror" setup
+    wizard_exit=$?
+
+    # Re-check whether the wizard wrote the required values.
+    env_ready=true
+    for key in GITHUB_TOKEN GITLAB_TOKEN GITLAB_GROUP; do
+        grep -Eq "^${key}=.+" .env || env_ready=false
+    done
+
+    if [ "$wizard_exit" -eq 0 ] && $env_ready; then
+        if $have_systemd && ! $timer_enabled; then
+            info "Enabling the backup timer..."
+            systemctl --user enable --now "$UNIT_NAME.timer"
+            timer_enabled=true
+        fi
     fi
+elif ! $timer_enabled && $env_ready && $have_systemd; then
+    # Re-run: env is already filled in — enable the timer now if it isn't on yet.
+    systemctl --user enable --now "$UNIT_NAME.timer"
+    timer_enabled=true
+    info "Backup timer enabled."
+fi
 
-    # Lingering: without it, user timers stop when you log out (VPS!).
+# Lingering: without it, user timers stop when you log out (VPS!).
+if $have_systemd; then
     if [ "$(loginctl show-user "$USER" --property=Linger --value 2>/dev/null)" = "no" ]; then
         warn "to keep backups running while you're logged out (e.g. on a VPS), run:"
         warn "    loginctl enable-linger $USER"
     fi
 fi
 
-# --- next steps / wizard launch ---------------------------------------------
+# --- summary ----------------------------------------------------------------
 
 echo
-if ! $env_ready && [ -t 0 ]; then
-    info "Launching the interactive setup wizard..."
-    "$REPO_DIR/.venv/bin/git-dr-mirror" setup
-else
-    info "Install complete. Next steps:"
-    if ! $env_ready; then
-        echo "  1. Run the setup wizard:       $REPO_DIR/.venv/bin/git-dr-mirror setup"
-        echo "     (or fill in tokens manually: \$EDITOR $REPO_DIR/.env)"
-    fi
-    echo "  Preview without changes:       $REPO_DIR/.venv/bin/git-dr-mirror --dry-run"
-    echo "  Test with a single repo:       $REPO_DIR/.venv/bin/git-dr-mirror --repo some-small-repo"
-    if $have_systemd; then
-        if ! $timer_enabled; then
-            echo "  Enable the schedule:           systemctl --user enable --now $UNIT_NAME.timer"
-        fi
-        echo "  Check the schedule:            systemctl --user list-timers $UNIT_NAME.timer"
-        echo "  Run a backup now:              systemctl --user start $UNIT_NAME.service"
-        echo "  Watch logs:                    journalctl --user -u $UNIT_NAME -f"
+info "All done."
+if $have_systemd; then
+    if $timer_enabled; then
+        echo "  Backups run automatically every 6 hours."
     else
-        echo "  No systemd: schedule with cron instead:"
-        echo "    17 */6 * * *  cd $REPO_DIR && ./.venv/bin/git-dr-mirror >> ~/.local/state/git-dr-mirror.log 2>&1"
+        echo "  Timer not enabled (credentials incomplete)."
+        echo "  Run the wizard again once your tokens are ready:"
+        echo "    $REPO_DIR/.venv/bin/git-dr-mirror setup"
     fi
+    echo "  Check the schedule:   systemctl --user list-timers $UNIT_NAME.timer"
+    echo "  Run a backup now:     systemctl --user start $UNIT_NAME.service"
+    echo "  Watch logs:           journalctl --user -u $UNIT_NAME -f"
+else
+    echo "  No systemd: add this cron entry to schedule automatic backups:"
+    echo "    17 */6 * * *  cd $REPO_DIR && ./.venv/bin/git-dr-mirror >> ~/.local/state/git-dr-mirror.log 2>&1"
 fi
