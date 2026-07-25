@@ -80,7 +80,7 @@ def test_404_carries_status_code():
 
 def test_jitter_produces_variable_delays():
     """Backoff delays should vary across retries (full-jitter, not constant)."""
-    from git_dr_mirror.http_client import BACKOFF_BASE, BACKOFF_MAX_CAP
+    from git_dr_mirror.http_client import BACKOFF_MAX_CAP
 
     delays: list[float] = []
 
