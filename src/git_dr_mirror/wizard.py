@@ -299,6 +299,7 @@ def _check_environment() -> str | None:
 def _has_systemd() -> bool:
     """Return True if a systemd user session is reachable on this machine."""
     import subprocess
+
     result = subprocess.run(
         ["systemctl", "--user", "show-environment"],
         capture_output=True,

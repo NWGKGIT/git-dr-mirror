@@ -62,9 +62,7 @@ def request(
         if attempt and not skip_backoff:
             cap = min(BACKOFF_MAX_CAP, BACKOFF_BASE * (2 ** (attempt - 1)))
             delay = random.uniform(0, cap)
-            log.debug(
-                "Retrying %s %s in %.1fs (attempt %d)", method, url, delay, attempt + 1
-            )
+            log.debug("Retrying %s %s in %.1fs (attempt %d)", method, url, delay, attempt + 1)
             sleep(delay)
         skip_backoff = False
 
@@ -87,8 +85,7 @@ def request(
 
         if response.status_code >= 400:
             raise ApiError(
-                f"{method} {url} failed with HTTP {response.status_code}: "
-                f"{response.text[:500]}",
+                f"{method} {url} failed with HTTP {response.status_code}: {response.text[:500]}",
                 status_code=response.status_code,
             )
         return response

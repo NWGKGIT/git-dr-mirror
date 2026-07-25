@@ -89,8 +89,12 @@ def test_jitter_produces_variable_delays():
 
     session = FakeSession([FakeResponse(500), FakeResponse(500), FakeResponse(200)])
     request(
-        session, "GET", "https://api.example.com/x",
-        timeout=5, retries=3, sleep=record_sleep,
+        session,
+        "GET",
+        "https://api.example.com/x",
+        timeout=5,
+        retries=3,
+        sleep=record_sleep,
     )
     assert len(delays) == 2, "expected one sleep per retry"
     # Full-jitter: delay must be in [0, cap] — cap for attempt 1 is BACKOFF_BASE
@@ -106,13 +110,19 @@ def test_retry_after_does_not_double_sleep():
 
     # First response: 429 with Retry-After: 5
     # Second response: success
-    session = FakeSession([
-        FakeResponse(429, headers={"Retry-After": "5"}),
-        FakeResponse(200),
-    ])
+    session = FakeSession(
+        [
+            FakeResponse(429, headers={"Retry-After": "5"}),
+            FakeResponse(200),
+        ]
+    )
     request(
-        session, "GET", "https://api.example.com/x",
-        timeout=5, retries=2, sleep=record_sleep,
+        session,
+        "GET",
+        "https://api.example.com/x",
+        timeout=5,
+        retries=2,
+        sleep=record_sleep,
     )
     # Exactly one sleep call: the Retry-After value (5s). No extra jitter sleep.
     assert sleeps == [5], f"expected [5], got {sleeps}"
