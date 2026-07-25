@@ -74,6 +74,18 @@ def _run_check(env_file: str | None) -> int:
     return 0 if all_ok else 1
 
 
+def _parse_subcommand_args(rest: list[str]) -> str | None:
+    """Parse the optional ``--env-file PATH`` flag for setup/check.
+
+    Using argparse here means both ``--env-file PATH`` and ``--env-file=PATH``
+    work, regardless of argument ordering.
+    """
+    p = argparse.ArgumentParser(add_help=False)
+    p.add_argument("--env-file", metavar="PATH", default=None)
+    args, _ = p.parse_known_args(rest)
+    return args.env_file
+
+
 def main(argv: list[str] | None = None) -> int:
     raw = sys.argv[1:] if argv is None else argv
 
@@ -82,10 +94,10 @@ def main(argv: list[str] | None = None) -> int:
     if raw and raw[0] == "setup":
         from .wizard import run_wizard
 
-        env_file = raw[2] if len(raw) > 2 and raw[1] == "--env-file" else None
+        env_file = _parse_subcommand_args(raw[1:])
         return run_wizard(env_file=env_file)
     if raw and raw[0] == "check":
-        env_file = raw[2] if len(raw) > 2 and raw[1] == "--env-file" else None
+        env_file = _parse_subcommand_args(raw[1:])
         return _run_check(env_file)
 
     args = build_parser().parse_args(raw)
