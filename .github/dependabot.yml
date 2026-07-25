@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  # Keep GitHub Actions up to date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Addis_Ababa"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "ci"
+
+  # Keep Python dependencies up to date (pip ecosystem covers pyproject.toml)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Addis_Ababa"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(deps)"
+    # Group all non-major dependency bumps into a single PR to reduce noise
+    groups:
+      python-deps:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
