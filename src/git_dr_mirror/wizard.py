@@ -347,12 +347,10 @@ def _collect_config(env_path: Path) -> dict[str, str]:
         + _c("33", "Metadata: Read-only")
     )
     _info(
-        "GitLab Classic token: "
+        "GitLab Legacy token: "
         + _c("36", "https://gitlab.com/-/user_settings/personal_access_tokens")
     )
-    _info(
-        "  - Add a " + _c("33", "Classic Token") + " (Fine-grained tokens cannot create projects)"
-    )
+    _info("  - Add a " + _c("33", "Legacy Token") + " (Fine-grained tokens cannot create projects)")
     _info(
         "  - Scopes: "
         + _c("33", "api")

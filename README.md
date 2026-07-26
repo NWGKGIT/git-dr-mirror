@@ -101,7 +101,7 @@ $EDITOR .env                # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
   - Scope: **`repo`**
 
 **GitLab**: [Create here](https://gitlab.com/-/user_settings/personal_access_tokens)
-- Use a **Classic Token** (Fine-grained tokens are not supported because they lack the ability to create repositories via the API).
+- Use a **Legacy Token** (Fine-grained tokens are not supported because they lack the ability to create repositories via the API).
 - Scopes: **`api`** (to create backup projects) and **`write_repository`** (to push code).
 - No delete or admin permissions are needed; the tool never deletes anything.
 
