@@ -352,7 +352,7 @@ def _collect_config(env_path: Path) -> dict[str, str]:
     )
     _info("  - Group/Project access: " + _c("33", "All groups and projects that I'm a member of"))
     _info("  - Resource: Repository -> " + _c("33", "Code") + " (Read & Push)")
-    _info("  - Resource: Repository -> " + _c("33", "Repository") + " (Create / Read)")
+    _info("  - Resource: Projects   -> " + _c("33", "Project") + " (Create)")
     _info("  - Resource: Groups     -> " + _c("33", "Group") + " (Read)")
     _info(
         "  (Or Classic Token: scopes " + _c("33", "api") + ", " + _c("33", "write_repository") + ")"

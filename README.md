@@ -105,7 +105,7 @@ $EDITOR .env                # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
   - **Group and project access**: _"All groups and projects that I'm a member of"_
   - **Resource access**:
     - Under **Repository** -> **`Code`**: Select **Push** (or Read & Push)
-    - Under **Repository** -> **`Repository`**: Select **Create / Read** (to create missing backup projects)
+    - Under **Projects** -> **`Project`**: Select **Create** (to create backup projects via API)
     - Under **Groups** -> **`Group`**: Select **Read** (to locate target group)
 - **Classic Token (Legacy)**: Scopes: **`api`** and **`write_repository`**
 - No delete or admin permissions are needed; the tool never deletes anything.
