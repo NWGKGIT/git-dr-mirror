@@ -101,7 +101,11 @@ $EDITOR .env                # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
   - Scope: **`repo`**
 
 **GitLab**: [Create here](https://gitlab.com/-/user_settings/personal_access_tokens)
-- Scopes: **`api`** (create projects) and **`write_repository`** (push)
+- Click **Generate fine-grained token**.
+- **Group and project access**: Select _"All groups and projects that I'm a member of"_.
+- **Resource access**: 
+  - Add **Groups** resource -> Permissions: **`api`**
+  - Add **Repository** resource -> Permissions: **`write_repository`**
 - No delete or admin permissions are needed; the tool never deletes anything.
 
 **GitLab group**: create a group once in the GitLab UI (for example

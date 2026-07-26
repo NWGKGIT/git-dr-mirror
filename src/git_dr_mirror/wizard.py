@@ -329,15 +329,30 @@ def _collect_config(env_path: Path) -> dict[str, str]:
     """Prompt for required and common-optional settings; return updates."""
     _heading("Required settings")
     _info(
-        "To keep backups running uninterrupted, set token expiration to 1 year (or 'No expiration')."
+        "To keep backups running uninterrupted, set token expiration to "
+        + _c("32", "1 year")
+        + " (or 'No expiration')."
     )
     _info("You can renew tokens anytime by re-running: " + _bold(_BIN + " setup"))
     print()
-    _info("GitHub Fine-Grained token: https://github.com/settings/personal-access-tokens/new")
+    _info(
+        "GitHub Fine-Grained token: "
+        + _c("36", "https://github.com/settings/personal-access-tokens/new")
+    )
     _info("  - Access: All repositories")
-    _info("  - Permissions: Contents: Read-only, Metadata: Read-only")
-    _info("GitLab Access token: https://gitlab.com/-/user_settings/personal_access_tokens")
-    _info("  - Scopes: api, write_repository")
+    _info(
+        "  - Permissions: "
+        + _c("33", "Contents: Read-only")
+        + ", "
+        + _c("33", "Metadata: Read-only")
+    )
+    _info(
+        "GitLab Fine-Grained token: "
+        + _c("36", "https://gitlab.com/-/user_settings/personal_access_tokens")
+    )
+    _info("  - Group/Project access: " + _c("33", "All groups and projects that I'm a member of"))
+    _info("  - Resource: Groups     -> Permissions: " + _c("33", "api"))
+    _info("  - Resource: Repository -> Permissions: " + _c("33", "write_repository"))
     print()
     _info("Leave a field blank to keep the value shown in [brackets].")
     updates = _prompt_fields(_REQUIRED_KEYS, env_path)
