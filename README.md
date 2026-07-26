@@ -52,7 +52,7 @@ directory:
 
 ## Requirements
 
-- A Unix-like OS: Linux, macOS, or Windows via WSL. (The run lock uses
+- A Unix-like OS: Linux, or Windows via WSL. (The run lock uses
   `flock`, so native Windows is not supported.)
 - Python 3.9 or newer, with [uv](https://docs.astral.sh/uv/) or plain
   `python3` + pip/venv. The installer auto-detects and uses what you have.
