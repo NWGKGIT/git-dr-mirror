@@ -98,29 +98,11 @@ def check_gitlab(config: Config) -> CheckResult:
     try:
         session = gitlab.make_session(config)
 
-        # 1. Token identity — distinguishes "bad token" from "group not visible".
-        try:
-            request(
-                session,
-                "GET",
-                f"{config.gitlab_url}/api/v4/user",
-                timeout=config.http_timeout,
-                retries=config.http_retries,
-            )
-        except ApiError as exc:
-            if exc.status_code == 401:
-                return CheckResult(
-                    False,
-                    title,
-                    "authentication failed (HTTP 401)",
-                    "The GitLab token is invalid or expired. Create a new one "
-                    "under GitLab → Preferences → Access tokens with the 'api' "
-                    "and 'write_repository' scopes.",
-                    keys=("GITLAB_TOKEN",),
-                )
-            raise
-
-        # 2. Group exists and the token can see it.
+        # Query the backup group directly — a single call tells us both
+        # whether the token is valid (401) and whether the group is visible
+        # (404/403). We deliberately avoid GET /api/v4/user because that
+        # endpoint requires the "User: Read" resource on fine-grained tokens,
+        # which is not needed for backup operations.
         encoded = quote(config.gitlab_group, safe="")
         try:
             group = request(
@@ -131,6 +113,17 @@ def check_gitlab(config: Config) -> CheckResult:
                 retries=config.http_retries,
             ).json()
         except ApiError as exc:
+            if exc.status_code == 401:
+                return CheckResult(
+                    False,
+                    title,
+                    "authentication failed (HTTP 401)",
+                    "The GitLab token is invalid or expired. Create a new fine-grained "
+                    "token at https://gitlab.com/-/user_settings/personal_access_tokens "
+                    "with Repository → Code (Read & Push), Repository → Repository "
+                    "(Create/Read), and Groups → Group (Read).",
+                    keys=("GITLAB_TOKEN",),
+                )
             if exc.status_code == 404:
                 return CheckResult(
                     False,
