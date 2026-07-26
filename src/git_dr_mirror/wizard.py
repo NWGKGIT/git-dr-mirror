@@ -328,7 +328,9 @@ def _seed_env_file(env_path: Path, example_path: Path) -> None:
 def _collect_config(env_path: Path) -> dict[str, str]:
     """Prompt for required and common-optional settings; return updates."""
     _heading("Required settings")
-    _info("To keep backups running uninterrupted, set token expiration to 1 year (or 'No expiration').")
+    _info(
+        "To keep backups running uninterrupted, set token expiration to 1 year (or 'No expiration')."
+    )
     _info("You can renew tokens anytime by re-running: " + _bold(_BIN + " setup"))
     print()
     _info("GitHub Fine-Grained token: https://github.com/settings/personal-access-tokens/new")
