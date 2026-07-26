@@ -205,6 +205,8 @@ if ! $env_ready && [ -t 0 ]; then
             info "Enabling the backup timer..."
             systemctl --user enable --now "$UNIT_NAME.timer"
             timer_enabled=true
+            info "Triggering the first backup run now in the background..."
+            systemctl --user start "$UNIT_NAME.service"
         fi
     fi
 elif ! $timer_enabled && $env_ready && $have_systemd; then
