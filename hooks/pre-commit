@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Pre-commit hook: auto-format and lint with ruff before every commit.
+#
+# Installed automatically by install.sh.
+# To skip in an emergency: git commit --no-verify
+
+set -euo pipefail
+
+REPO_DIR="$(git rev-parse --show-toplevel)"
+cd "$REPO_DIR"
+
+# Prefer the project venv; fall back to whatever is on PATH.
+if [ -x ".venv/bin/ruff" ]; then
+    RUFF=".venv/bin/ruff"
+elif command -v uv > /dev/null 2>&1; then
+    RUFF="uv run ruff"
+elif command -v ruff > /dev/null 2>&1; then
+    RUFF="ruff"
+else
+    echo "pre-commit: ruff not found; skipping lint (run ./install.sh to set up the venv)"
+    exit 0
+fi
+
+# 1. Auto-format staged Python files (modifies them in place).
+$RUFF format .
+
+# 2. Re-stage any files that were just reformatted.
+git add -u
+
+# 3. Check for lint errors (F/E codes). --fix handles safe auto-fixes.
+$RUFF check --fix .
+
+# Re-stage any auto-fixed files.
+git add -u

@@ -86,6 +86,17 @@ fi
     || die "installation sanity check failed: .venv/bin/git-dr-mirror does not run."
 info "Installed $(.venv/bin/git-dr-mirror --version)"
 
+# --- git pre-commit hook (dev quality-of-life) ------------------------------
+
+if [ -d "$REPO_DIR/.git" ] && [ -f "$REPO_DIR/hooks/pre-commit" ]; then
+    hook_dest="$REPO_DIR/.git/hooks/pre-commit"
+    if [ ! -f "$hook_dest" ] || ! diff -q "$REPO_DIR/hooks/pre-commit" "$hook_dest" > /dev/null 2>&1; then
+        cp "$REPO_DIR/hooks/pre-commit" "$hook_dest"
+        chmod +x "$hook_dest"
+        info "Installed git pre-commit hook (auto ruff format + check on every commit)."
+    fi
+fi
+
 # --- configuration ----------------------------------------------------------
 
 env_ready=true
