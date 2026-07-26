@@ -347,15 +347,18 @@ def _collect_config(env_path: Path) -> dict[str, str]:
         + _c("33", "Metadata: Read-only")
     )
     _info(
-        "GitLab Fine-Grained token: "
+        "GitLab Classic token: "
         + _c("36", "https://gitlab.com/-/user_settings/personal_access_tokens")
     )
-    _info("  - Group/Project access: " + _c("33", "All groups and projects that I'm a member of"))
-    _info("  - Resource: Repository -> " + _c("33", "Code") + " (Read & Push)")
-    _info("  - Resource: Projects   -> " + _c("33", "Project") + " (Create)")
-    _info("  - Resource: Groups     -> " + _c("33", "Group") + " (Read)")
     _info(
-        "  (Or Classic Token: scopes " + _c("33", "api") + ", " + _c("33", "write_repository") + ")"
+        "  - Add a " + _c("33", "Classic Token") + " (Fine-grained tokens cannot create projects)"
+    )
+    _info(
+        "  - Scopes: "
+        + _c("33", "api")
+        + " (to create projects) and "
+        + _c("33", "write_repository")
+        + " (to push)"
     )
     _info("GitLab Group creation: " + _c("36", "https://gitlab.com/groups/new#create-group"))
     print()

@@ -118,10 +118,9 @@ def check_gitlab(config: Config) -> CheckResult:
                     False,
                     title,
                     "authentication failed (HTTP 401)",
-                    "The GitLab token is invalid or expired. Create a new fine-grained "
-                    "token at https://gitlab.com/-/user_settings/personal_access_tokens "
-                    "with Repository → Code (Read & Push), Repository → Repository "
-                    "(Create/Read), and Groups → Group (Read).",
+                    "The GitLab token is invalid or expired. Create a new Classic Token "
+                    "at https://gitlab.com/-/user_settings/personal_access_tokens "
+                    "with the 'api' and 'write_repository' scopes.",
                     keys=("GITLAB_TOKEN",),
                 )
             if exc.status_code == 404:
