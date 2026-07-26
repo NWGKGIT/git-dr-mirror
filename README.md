@@ -101,11 +101,13 @@ $EDITOR .env                # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
   - Scope: **`repo`**
 
 **GitLab**: [Create here](https://gitlab.com/-/user_settings/personal_access_tokens)
-- Click **Generate fine-grained token**.
-- **Group and project access**: Select _"All groups and projects that I'm a member of"_.
-- **Resource access**: 
-  - Add **Groups** resource -> Permissions: **`api`**
-  - Add **Repository** resource -> Permissions: **`write_repository`**
+- **Fine-grained Token (New UI)**:
+  - **Group and project access**: _"All groups and projects that I'm a member of"_
+  - **Resource access**:
+    - Under **Repository** -> **`Code`**: Select **Push** (or Read & Push)
+    - Under **Repository** -> **`Repository`**: Select **Create / Read** (to create missing backup projects)
+    - Under **Groups** -> **`Group`**: Select **Read** (to locate target group)
+- **Classic Token (Legacy)**: Scopes: **`api`** and **`write_repository`**
 - No delete or admin permissions are needed; the tool never deletes anything.
 
 **GitLab group**: create a group once in the GitLab UI (for example
