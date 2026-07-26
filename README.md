@@ -110,7 +110,7 @@ $EDITOR .env                # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
 - **Classic Token (Legacy)**: Scopes: **`api`** and **`write_repository`**
 - No delete or admin permissions are needed; the tool never deletes anything.
 
-**GitLab group**: create a group once in the GitLab UI (for example
+**GitLab group**: [Create group here](https://gitlab.com/groups/new#create-group) once in the GitLab UI (for example
 `my-github-backup`) and put its path in `GITLAB_GROUP`. Projects inside the
 group are created automatically. The group itself is not, which keeps the
 token's blast radius small.

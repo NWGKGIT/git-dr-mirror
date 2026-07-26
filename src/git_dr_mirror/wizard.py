@@ -357,6 +357,7 @@ def _collect_config(env_path: Path) -> dict[str, str]:
     _info(
         "  (Or Classic Token: scopes " + _c("33", "api") + ", " + _c("33", "write_repository") + ")"
     )
+    _info("GitLab Group creation: " + _c("36", "https://gitlab.com/groups/new#create-group"))
     print()
     _info("Leave a field blank to keep the value shown in [brackets].")
     updates = _prompt_fields(_REQUIRED_KEYS, env_path)
