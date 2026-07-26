@@ -70,7 +70,6 @@ def _gl_session(responses):
 def test_gitlab_ok(config, monkeypatch):
     session = FakeSession(
         [
-            FakeResponse(200, json_data={"id": 1, "username": "user"}),  # /user
             FakeResponse(200, json_data={"id": 42, "name": "backup"}),  # /groups/...
         ]
     )
@@ -81,6 +80,7 @@ def test_gitlab_ok(config, monkeypatch):
 
 
 def test_gitlab_token_invalid(config, monkeypatch):
+    """401 from the group endpoint means bad/expired token."""
     session = FakeSession([FakeResponse(401, text="Unauthorized")])
     monkeypatch.setattr("git_dr_mirror.gitlab.make_session", lambda c: session)
     result = preflight.check_gitlab(config)
@@ -92,7 +92,6 @@ def test_gitlab_token_invalid(config, monkeypatch):
 def test_gitlab_group_not_found(config, monkeypatch):
     session = FakeSession(
         [
-            FakeResponse(200, json_data={"id": 1}),  # /user succeeds
             FakeResponse(404, text="Not Found"),  # /groups/... 404
         ]
     )
@@ -106,7 +105,6 @@ def test_gitlab_group_not_found(config, monkeypatch):
 def test_gitlab_group_forbidden(config, monkeypatch):
     session = FakeSession(
         [
-            FakeResponse(200, json_data={"id": 1}),  # /user succeeds
             FakeResponse(403, text="Forbidden"),  # /groups/... 403
         ]
     )
@@ -133,8 +131,7 @@ def test_run_all_returns_two_results(config, monkeypatch):
     gh_session = FakeSession([FakeResponse(200, json_data=[], links={})])
     gl_session = FakeSession(
         [
-            FakeResponse(200, json_data={"id": 1}),
-            FakeResponse(200, json_data={"id": 42}),
+            FakeResponse(200, json_data={"id": 42}),  # /groups/... only
         ]
     )
     monkeypatch.setattr("git_dr_mirror.github.make_session", lambda c: gh_session)
