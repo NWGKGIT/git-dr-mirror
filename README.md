@@ -89,16 +89,18 @@ $EDITOR .env                # fill in GITHUB_TOKEN, GITLAB_TOKEN, GITLAB_GROUP
 
 ### Creating the tokens
 
-**GitHub**: <https://github.com/settings/personal-access-tokens>
-(fine-grained token, recommended):
+> [!TIP]
+> **Token Expiration Recommendation**
+> To ensure your automated background backups run uninterrupted, it is highly recommended to set your token expiration dates to the **maximum allowed duration** (e.g., 1 year) or **No expiration** (if permitted by your organization).
 
-- Repository access: _All repositories_
-- Permissions: **Contents: Read-only**, **Metadata: Read-only**
+**GitHub**:
+- **Fine-grained token (Recommended)**: [Create here](https://github.com/settings/personal-access-tokens/new)
+  - Repository access: _All repositories_
+  - Permissions: **Contents: Read-only**, **Metadata: Read-only**
+- **Classic token**: [Create here](https://github.com/settings/tokens/new)
+  - Scope: **`repo`**
 
-Or a classic token with the `repo` scope.
-
-**GitLab**: _Preferences → Access tokens_:
-
+**GitLab**: [Create here](https://gitlab.com/-/user_settings/personal_access_tokens)
 - Scopes: **`api`** (create projects) and **`write_repository`** (push)
 - No delete or admin permissions are needed; the tool never deletes anything.
 
@@ -106,6 +108,15 @@ Or a classic token with the `repo` scope.
 `my-github-backup`) and put its path in `GITLAB_GROUP`. Projects inside the
 group are created automatically. The group itself is not, which keeps the
 token's blast radius small.
+
+#### Token Expiration & Renewal
+
+Personal Access Tokens (PATs) cannot be renewed automatically. If a token expires, automated runs will exit with an error. 
+To renew or rotate your tokens, you do **not** need to edit files manually. Simply run:
+```bash
+./.venv/bin/git-dr-mirror setup
+```
+This will launch the setup wizard again, allowing you to quickly update your tokens without interrupting your existing mirrors.
 
 ## How it works
 
